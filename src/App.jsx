@@ -56,6 +56,10 @@ const average = (arr) => {
   return Number(result).toFixed(1);
 };
 
+const API_KEY = "af877589";
+
+// http://www.omdbapi.com/?apikey=[yourkey]&s=....
+
 export default function App() {
   const [movies, setMovies] = useState(tempMovieData);
   const [watched, setWatched] = useState(tempWatchedData);
