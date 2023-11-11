@@ -1,55 +1,7 @@
 import { useEffect, useState } from "react";
 import React from "react";
 import "./index.css";
-
-const tempMovieData = [
-  {
-    imdbID: "tt1375666",
-    Title: "Inception",
-    Year: "2010",
-    Poster:
-      "https://m.media-amazon.com/images/M/MV5BMjAxMzY3NjcxNF5BMl5BanBnXkFtZTcwNTI5OTM0Mw@@._V1_SX300.jpg",
-  },
-
-  {
-    imdbID: "tt0133093",
-    Title: "The Matrix",
-    Year: "1999",
-    Poster:
-      "https://m.media-amazon.com/images/M/MV5BNzQzOTk3OTAtNDQ0Zi00ZTVkLWI0MTEtMDllZjNkYzNjNTc4L2ltYWdlXkEyXkFqcGdeQXVyNjU0OTQ0OTY@._V1_SX300.jpg",
-  },
-  {
-    imdbID: "tt6751668",
-    Title: "Parasite",
-    Year: "2019",
-    Poster:
-      "https://m.media-amazon.com/images/M/MV5BYWZjMjk3ZTItODQ2ZC00NTY5LWE0ZDYtZTI3MjcwN2Q5NTVkXkEyXkFqcGdeQXVyODk4OTc3MTY@._V1_SX300.jpg",
-  },
-];
-
-const tempWatchedData = [
-  {
-    imdbID: "tt1375666",
-    Title: "Inception",
-    Year: "2010",
-    Poster:
-      "https://m.media-amazon.com/images/M/MV5BMjAxMzY3NjcxNF5BMl5BanBnXkFtZTcwNTI5OTM0Mw@@._V1_SX300.jpg",
-    runtime: 148,
-    imdbRating: 8.8,
-    userRating: 10,
-  },
-
-  {
-    imdbID: "tt0088763",
-    Title: "Back to the Future",
-    Year: "1985",
-    Poster:
-      "https://m.media-amazon.com/images/M/MV5BZmU0M2Y1OGUtZjIxNi00ZjBkLTg1MjgtOWIyNThiZWIwYjRiXkEyXkFqcGdeQXVyMTQxNzMzNDI@._V1_SX300.jpg",
-    runtime: 116,
-    imdbRating: 8.5,
-    userRating: 9,
-  },
-];
+import StarRating from "./StarRating";
 
 const average = (arr) => {
   const result = arr.reduce((acc, cur, i, arr) => acc + cur / arr.length, 0);
@@ -61,7 +13,7 @@ const API_KEY = "af877589";
 export default function App() {
   const [query, setQuery] = useState("");
   const [movies, setMovies] = useState([]);
-  const [watched, setWatched] = useState(tempWatchedData);
+  const [watched, setWatched] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [selectedId, setSelectedId] = useState(null);
@@ -97,6 +49,14 @@ export default function App() {
 
   function handleCloseMovie() {
     return setSelectedId(null);
+  }
+
+  function handleAddWatched(movie) {
+    setWatched((value) => [...value, movie]);
+  }
+
+  function handleDeletWatched(id) {
+    setWatched((watched) => watched.filter((movie) => movie.imdbID !== id));
   }
 
   useEffect(
@@ -135,11 +95,16 @@ export default function App() {
             <MovieDetails
               selectedId={selectedId}
               handleCloseMovie={handleCloseMovie}
+              handleAddWatched={handleAddWatched}
+              watched={watched}
             ></MovieDetails>
           ) : (
             <React.Fragment>
               <WatchedSummary watched={watched}></WatchedSummary>
-              <WatchedMovieList watched={watched}></WatchedMovieList>
+              <WatchedMovieList
+                watched={watched}
+                handleDeletWatched={handleDeletWatched}
+              ></WatchedMovieList>
             </React.Fragment>
           )}
         </Box>
@@ -250,8 +215,15 @@ function Movie({ movie, onSelectMovie }) {
   );
 }
 
-function MovieDetails({ selectedId, handleCloseMovie }) {
+function MovieDetails({
+  selectedId,
+  handleCloseMovie,
+  handleAddWatched,
+  watched,
+}) {
   const [movie, setMovie] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [userRating, setUserRating] = useState(0);
   const {
     Title: title,
     Year: year,
@@ -265,14 +237,43 @@ function MovieDetails({ selectedId, handleCloseMovie }) {
     Genre: genre,
   } = movie;
 
+  function handleAdd() {
+    const newWatchedMovie = {
+      imdbID: selectedId,
+      title,
+      year,
+      poster,
+      imdbRating: Number(imdbRating),
+      runtime: Number(runtime.split(" ")[0]),
+      userRating,
+    };
+
+    if (!duplicate) {
+      handleAddWatched(newWatchedMovie);
+    } else {
+      window.alert("You already have this movie in your list.");
+    }
+    handleCloseMovie();
+  }
+  const duplicate = watched.map((movie) => movie.imdbID).includes(selectedId);
+  const watchedUserRating = watched.find(
+    (movie) => movie.imdbID === selectedId
+  )?.userRating;
+
   useEffect(
     function () {
       async function getMovieDetails() {
-        const res = await fetch(
-          `http://www.omdbapi.com/?apikey=${API_KEY}&i=${selectedId}`
-        );
-        const data = await res.json();
-        setMovie(data);
+        setIsLoading(true);
+        try {
+          const res = await fetch(
+            `http://www.omdbapi.com/?apikey=${API_KEY}&i=${selectedId}`
+          );
+          const data = await res.json();
+          setMovie(data);
+          setIsLoading(false);
+        } catch (err) {
+          window.alert(err);
+        }
       }
 
       getMovieDetails();
@@ -282,47 +283,78 @@ function MovieDetails({ selectedId, handleCloseMovie }) {
 
   return (
     <div className="details">
-      <header>
-        <button className="btn-back" onClick={handleCloseMovie}>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="26"
-            height="26"
-            fill="#000000"
-            viewBox="0 0 256 256"
-          >
-            <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm48-88a8,8,0,0,1-8,8H107.31l18.35,18.34a8,8,0,0,1-11.32,11.32l-32-32a8,8,0,0,1,0-11.32l32-32a8,8,0,0,1,11.32,11.32L107.31,120H168A8,8,0,0,1,176,128Z"></path>
-          </svg>
-        </button>
-        <img src={poster} alt={`Poster of ${movie} movie`}></img>
-        <div className="details-overview">
-          <h2>{title}</h2>
-          <p>
-            {released} &bull; {runtime}
-          </p>
-          <p>{genre}</p>
-          <p>
-            <span>⭐</span>
-            {imdbRating} IMDb rating
-          </p>
-        </div>
-      </header>
+      {isLoading ? (
+        <Loader></Loader>
+      ) : (
+        <React.Fragment>
+          <header>
+            <button className="btn-back" onClick={handleCloseMovie}>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="26"
+                height="26"
+                fill="#000000"
+                viewBox="0 0 256 256"
+              >
+                <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm48-88a8,8,0,0,1-8,8H107.31l18.35,18.34a8,8,0,0,1-11.32,11.32l-32-32a8,8,0,0,1,0-11.32l32-32a8,8,0,0,1,11.32,11.32L107.31,120H168A8,8,0,0,1,176,128Z"></path>
+              </svg>
+            </button>
+            <img src={poster} alt={`Poster of ${movie} movie`}></img>
+            <div className="details-overview">
+              <h2>{title}</h2>
+              <p>
+                {released} &bull; {runtime}
+              </p>
+              <p>{genre}</p>
+              <p>
+                <span>⭐</span>
+                {imdbRating} IMDb rating
+              </p>
+            </div>
+          </header>
 
-      <section>
-        <p>
-          <em>{plot}</em>
-        </p>
-        <p>Starring {actors}</p>
-        <p>Directed by {director}</p>
-      </section>
+          <section>
+            <div className="rating">
+              {!duplicate ? (
+                <React.Fragment>
+                  <StarRating
+                    maxRating={10}
+                    size={24}
+                    onSetRating={setUserRating}
+                  ></StarRating>
+
+                  {userRating > 0 && (
+                    <button className="btn-add" onClick={handleAdd}>
+                      Add to list
+                    </button>
+                  )}
+                </React.Fragment>
+              ) : (
+                <p>
+                  You gav this movie
+                  <span> {watchedUserRating}⭐</span>
+                </p>
+              )}
+            </div>
+            <p>
+              <em>{plot}</em>
+            </p>
+            <p>Starring {actors}</p>
+            <p>Directed by {director}</p>
+          </section>
+        </React.Fragment>
+      )}
     </div>
   );
 }
 
 function WatchedSummary({ watched }) {
-  const avgImdbRating = average(watched.map((movie) => movie.imdbRating));
-  const avgUserRating = average(watched.map((movie) => movie.userRating));
-  const avgRuntime = average(watched.map((movie) => movie.runtime));
+  const avgImdbRatings = watched.map((el) => el.imdbRating);
+  const avgRating = average(avgImdbRatings);
+  const movieRuntimes = watched.map((el) => el.runtime);
+  const totalRuntime = movieRuntimes.reduce((acc, curr) => acc + curr, 0);
+  const avgUserRating = average(watched.map((el) => el.userRating));
+
   return (
     <div className="summary">
       <h2>Movies you watched</h2>
@@ -333,7 +365,7 @@ function WatchedSummary({ watched }) {
         </p>
         <p>
           <span>⭐️</span>
-          <span>{avgImdbRating}</span>
+          <span>{avgRating}</span>
         </p>
         <p>
           <span>🌟</span>
@@ -341,28 +373,32 @@ function WatchedSummary({ watched }) {
         </p>
         <p>
           <span>⏳</span>
-          <span>{avgRuntime} min</span>
+          <span>{totalRuntime} min</span>
         </p>
       </div>
     </div>
   );
 }
 
-function WatchedMovieList({ watched }) {
+function WatchedMovieList({ watched, handleDeletWatched }) {
   return (
     <ul className="list">
       {watched.map((movie) => (
-        <WatchedMovie key={movie.imdbID} movie={movie}></WatchedMovie>
+        <WatchedMovie
+          key={movie.imdbID}
+          movie={movie}
+          handleDeletWatched={handleDeletWatched}
+        ></WatchedMovie>
       ))}
     </ul>
   );
 }
 
-function WatchedMovie({ movie }) {
+function WatchedMovie({ movie, handleDeletWatched }) {
   return (
     <li>
-      <img src={movie.Poster} alt={`${movie.Title} poster`} />
-      <h3>{movie.Title}</h3>
+      <img src={movie.poster} alt={`${movie.title} poster`} />
+      <h3>{movie.title}</h3>
       <div>
         <p>
           <span>⭐️</span>
@@ -376,6 +412,23 @@ function WatchedMovie({ movie }) {
           <span>⏳</span>
           <span>{movie.runtime} min</span>
         </p>
+
+        <button
+          className="btn-delete"
+          onClick={() => {
+            handleDeletWatched(movie.imdbID);
+          }}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            fill="#fff"
+            viewBox="0 0 256 256"
+          >
+            <path d="M216,48H176V40a24,24,0,0,0-24-24H104A24,24,0,0,0,80,40v8H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM96,40a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8v8H96Zm96,168H64V64H192ZM112,104v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Zm48,0v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Z"></path>
+          </svg>
+        </button>
       </div>
     </li>
   );
