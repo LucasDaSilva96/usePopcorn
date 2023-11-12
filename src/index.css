@@ -328,8 +328,7 @@ body {
   aspect-ratio: 1;
   border-radius: 50%;
   border: none;
-  /* background-color: var(--color-text); */
-  background-color: transparent;
+  background-color: var(--color-text);
   backdrop-filter: blur(10px);
   color: var(--color-background-500);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.8);

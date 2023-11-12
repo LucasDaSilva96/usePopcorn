@@ -18,12 +18,15 @@ export default function App() {
   const [error, setError] = useState("");
   const [selectedId, setSelectedId] = useState(null);
 
+  const controller = new AbortController();
   async function fetchMovies(title) {
+    handleCloseMovie();
     setIsLoading(true);
     setError("");
     try {
       const url = await fetch(
-        `http://www.omdbapi.com/?apikey=${API_KEY}&s=${title}`
+        `http://www.omdbapi.com/?apikey=${API_KEY}&s=${title}`,
+        { signal: controller.signal }
       );
 
       if (!url.ok)
@@ -37,7 +40,9 @@ export default function App() {
 
       setMovies(res.Search);
     } catch (err) {
-      setError(err.message);
+      if (err.name !== "AbortError") {
+        setError(err.message);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -67,6 +72,10 @@ export default function App() {
         return;
       }
       fetchMovies(query);
+
+      return function () {
+        controller.abort();
+      };
     },
     [query]
   );
@@ -279,6 +288,35 @@ function MovieDetails({
       getMovieDetails();
     },
     [selectedId]
+  );
+
+  useEffect(
+    function () {
+      if (!title) return;
+      document.title = `Movie | ${title}`;
+
+      return function () {
+        document.title = "UsePopcorn";
+      };
+    },
+    [title]
+  );
+
+  useEffect(
+    function () {
+      function closeMovieEscape(e) {
+        if (e.code === "Escape") {
+          handleCloseMovie();
+        }
+      }
+
+      document.addEventListener("keydown", closeMovieEscape);
+
+      return function () {
+        document.removeEventListener("keydown", closeMovieEscape);
+      };
+    },
+    [handleCloseMovie]
   );
 
   return (
