@@ -224,6 +224,7 @@ body {
   text-transform: uppercase;
   font-size: 1.6rem;
   margin-bottom: 0.6rem;
+  text-align: center;
 }
 
 .summary div {
@@ -382,3 +383,25 @@ EMPTY STAR
 </svg>
 
 */
+
+@media (max-width: 900px) {
+  .search {
+    width: 25rem;
+  }
+
+  .summary div {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+  }
+
+  .list div {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+  }
+  .btn-delete {
+    position: relative;
+    margin-left: auto;
+  }
+}
